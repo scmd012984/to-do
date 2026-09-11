@@ -1,0 +1,152 @@
+# Base Repo
+
+## Purpose
+
+This is a **base repository**, not an application. It exists to be derived: clone it, rename the scope, and start a real project on top of a Clean Architecture skeleton that already enforces its own rules in CI and at commit time.
+
+The architecture follows Robert C. Martin's Clean Architecture. The dependency rule is absolute: source code dependencies only ever point inward, toward higher-level policy. The graph of who may import whom lives in a single file, `architecture/layers.json`, and every other tool (the architecture checker, dependency-cruiser, ESLint) reads from it instead of encoding the rule twice.
+
+## Stack
+
+- Next.js 16 (App Router, React Compiler, Turbopack)
+- React 19
+- TypeScript 5, strict mode
+- Tailwind CSS v4
+- bun (package manager, test runner, script runner)
+- dependency-cruiser (architecture graph enforcement)
+- lefthook (git hooks) and commitlint (Conventional Commits)
+- GitHub Actions (CI, CodeQL, secret scanning), Dependabot
+- Vercel (deployment target)
+
+## Requirements
+
+- bun 1.3 or newer
+- Node.js is not required to develop; bun runs TypeScript directly
+
+## Getting started
+
+This repository is meant to be derived, not run as-is:
+
+1. Use it as a template (GitHub "Use this template") or clone it into a new directory.
+2. Run `bun run derive <scope> <repo-name>`. The `@base` scope is not a handful of occurrences to fix by hand: it is in every import of every ring, in `.github/workflows/ci.yml`, in the documentation and in the tests, and two of those files used to read as binary to `grep`. `derive` renames it in every tracked text file, renames the root package, deletes `docs/base.html`, rewrites the prose in this file, in `SECURITY.md`, in `AGENTS.md` and in `docs/layers/web.md` that is only true of the base, and prints what it changed. It refuses to run a second time.
+3. Update `.github/CODEOWNERS` and `SECURITY.md` with the new owners and contact.
+4. Run `bun install`, then `bun run check`.
+5. Commit the result as `chore: derive from base-repo`. Nothing but names changed, so it needs no ring review.
+6. If the derived repository is private, code scanning needs GitHub Code Security enabled for the account. Without it, `.github/workflows/codeql.yml` fails on every pull request; disable that workflow under **Actions** rather than making it report green without scanning (`docs/decisions/0031`).
+7. Start building inside `packages/domain` outward; see the layer table below.
+
+`derive` writes these same steps into the derived project's own "Getting started", and prints them when it finishes, so they are read at the moment they apply rather than only here.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `bun run dev` | Runs the web app in development |
+| `bun run build` | Builds every workspace |
+| `bun run lint` | Lints every workspace |
+| `bun run typecheck` | Type-checks every workspace |
+| `bun run arch` | Runs the architecture checker (comments, `any`, `process.env`, layer imports) |
+| `bun run depcruise` | Runs dependency-cruiser against the layer graph |
+| `bun run structure` | Fails when a tracked directory has no line in `ESTRUCTURA.md`, or vice versa |
+| `bun run env-example` | Fails when a variable required in production by any `apps/*/src/main/env.ts` is missing from `.env.example` |
+| `bun run derive` | Turns a fresh copy of this base into a project of its own: `bun run derive <scope> <repo-name>` |
+| `bun run test` | Runs the test suite (`bun test`) |
+| `bun run check` | Runs every gate above, in the order its own script defines in `package.json`; this is the single gate CI and `pre-push` both call |
+
+## Repository layout
+
+```
+apps/web            Next.js application (delivery mechanism)
+apps/worker         background worker (delivery mechanism, not yet scaffolded)
+packages/domain     entities and business rules
+packages/application  use cases, orchestrates domain
+packages/contracts  shared request/response schemas (zod)
+packages/adapters   interface adapters: controllers, presenters, gateways
+packages/infrastructure  frameworks and drivers: database, external services
+scripts/architecture  the layer graph reader and the checker that enforces it
+architecture/layers.json  the single source of truth for the dependency graph
+```
+
+### Layer rules
+
+| Layer | May import | Notes |
+| --- | --- | --- |
+| `domain` | nothing | no external packages allowed |
+| `application` | `domain` | no external packages allowed |
+| `contracts` | `domain` | only `zod` as an external dependency |
+| `adapters` | `application`, `domain`, `contracts` | only `zod`; never `next`, `react`, `react-dom`, `drizzle-orm`, `@supabase/*`, `hono` |
+| `infrastructure` | `application`, `domain` | never `next`, `react`, `react-dom`; this is the only layer allowed to read `process.env` besides each app's `src/main` |
+| `apps/web` | `adapters`, `contracts`, `infrastructure`; `application` and `domain` only from `apps/web/src/main` | delivery mechanism |
+| `apps/worker` | `adapters`, `infrastructure`; `application` and `domain` only from `apps/worker/src/main` | delivery mechanism |
+
+Any change to this table starts in `architecture/layers.json`, not in prose.
+
+## Quality gates
+
+Three layers of the same gate, from fastest feedback to slowest:
+
+1. **`pre-commit` (lefthook)**: on staged files, in parallel, ESLint (`--max-warnings 0`) and the architecture checker; then `bun run typecheck`.
+2. **`commit-msg` (lefthook + commitlint)**: rejects commit messages that are not Conventional Commits.
+3. **`pre-push` (lefthook)**: runs `bun run check` in full before the push leaves the machine.
+4. **CI (GitHub Actions, `.github/workflows/ci.yml`)**: on every pull request and on push to `main`, runs `bun run check` and `bun run build`, a `gitleaks` secret scan, and `bun audit`. `.github/workflows/codeql.yml` runs CodeQL static analysis for JavaScript/TypeScript on the same triggers plus a weekly schedule.
+
+Nothing here should ever be weakened to make a change pass; if a rule is wrong, change `architecture/layers.json` and write it down.
+
+## Deployment
+
+Deployment target is always Vercel, connected to this GitHub repository (preview deployments per pull request, production from `main`). `apps/web/vercel.json`, not a repository-root file, declares the Vercel Cron entry that dispatches the outbox and job queue (`docs/decisions/0028`): because **Root Directory** below is `apps/web`, that directory is the effective project root Vercel reads configuration from, and a `vercel.json` at the repository root would be silently ignored by this project.
+
+In the Vercel project dashboard, under **Settings → Build and Deployment**:
+
+- **Root Directory**: `apps/web`
+- **Install Command**: run from the repository root so the workspace lockfile is respected, e.g. `cd .. && bun install --frozen-lockfile`
+- **Framework Preset**: Next.js (auto-detected once Root Directory is set)
+
+In the Vercel project dashboard, under **Settings → Environment Variables**, set `CRON_SECRET` (production): Vercel signs its own cron requests with it automatically once set, matching what `apps/web/src/main/env.ts` requires in production.
+
+The GitHub Actions dispatch trigger (`.github/workflows/cron-dispatch.yml`, the free-tier alternative to Vercel Cron described in `docs/decisions/0028`) is off until the repository asks for it (`docs/decisions/0029`). To enable it, in the GitHub repository settings under **Settings → Secrets and variables → Actions** set all three:
+
+- the variable `CRON_DISPATCH_ENABLED` to `true`, which is what puts the schedule to work; without it every scheduled run is a skipped job
+- the secret `CRON_DISPATCH_URL`, the deployed `https://.../api/cron/dispatch`
+- the secret `CRON_SECRET`, the same value the Vercel project uses
+
+With the variable unset, **Actions → Cron dispatch → Run workflow** still runs the job on demand and fails saying the two secrets are required, which is the quickest way to check the wiring before turning the schedule on. The workflow's `configuration` job also runs once a day and fails if either secret is set while the variable is not, so a half-enabled trigger cannot sit unnoticed.
+
+Recommended branch protection on `main` (GitHub repository settings):
+
+- Require a pull request before merging
+- Require status checks to pass before merging: `check`, `secrets`, `codeql`
+- Do not allow force pushes
+- Require a linear history
+
+## Security
+
+- Security headers are set in `apps/web/next.config.ts`: `Strict-Transport-Security` (2 years, `includeSubDomains`, `preload`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a restrictive `Permissions-Policy` (camera, microphone, geolocation, and payment all denied), `X-Frame-Options: DENY`, and `poweredByHeader: false`.
+- Content Security Policy is nonce-based and generated per request in `apps/web/src/proxy.ts`, following the Next.js Proxy convention (the successor to `middleware.ts` in Next.js 16). Development mode allows `'unsafe-eval'` for React's debugging support; production does not. A page must opt into dynamic rendering (for example with `connection()` from `next/server`) for the nonce to actually reach its scripts — static pages will still receive the header, but without a nonce baked into their markup.
+- `process.env` access is restricted by the architecture checker to `apps/*/src/main`; `apps/web/src/main/env.ts` is the one place that reads `NODE_ENV` to decide the CSP's dev/prod behavior.
+- Report a vulnerability by following `SECURITY.md` (email `keba2503@gmail.com`).
+
+## Structure
+
+`ESTRUCTURA.md` describes, in Spanish, every directory of the tree and the role it plays, plus where the pieces that do not exist yet will live. It is verified by `bun run structure`, which is part of `bun run check`: a directory that is not described there fails the gate.
+
+`docs/architecture-map.html` is a self-contained, interactive map of this repository's runtime architecture — the rings, the request path, the job path and the boundaries — generated with [Archify](https://github.com/tt-a1i/archify) (MIT) from its typed JSON source, `docs/architecture-map.json`. Both are base-only artifacts: `derive` deletes them like it deletes `docs/base.html`, because a derived project's architecture is its own and copying this one would be a diagram of the wrong system.
+
+To regenerate it after the architecture changes, clone Archify and run it through `bun` — never `npx`, which this repository forbids:
+
+```bash
+git clone --depth 1 https://github.com/tt-a1i/archify.git ~/.local/share/archify
+cd ~/.local/share/archify/archify
+bun bin/archify.mjs doctor
+bun bin/archify.mjs render architecture path/to/architecture-map.json out.html
+```
+
+`render` writes a quick local artifact; `deliver` is the checked handoff, and it refuses to replace the target unless schema, layout, route and label-clearance checks all pass. A non-zero exit is never a success: read the `diagnostics[]` it prints and apply only the listed `supportedFixes`. The generated HTML carries HTML comments, which this repository's `no-comments` rule rejects, so strip them from the artifact before committing it.
+
+## Environment variables
+
+`.env.example` lists every variable this repository reads, one file per app plus the ones shared across scripts and tests. `bun run env-example`, part of `bun run check`, reads every `requiredInProduction` list out of `apps/*/src/main/env.ts` and fails if any of those variables is missing from `.env.example` — so a variable a deployment actually needs is never discovered missing by first failing in production. It only enforces that direction: a variable used solely by a test suite (`SUPABASE_TEST_EMAIL`, say) can live in `.env.example` without any `env.ts` reading it.
+
+## Agentic workflow
+
+See `AGENTS.md`.

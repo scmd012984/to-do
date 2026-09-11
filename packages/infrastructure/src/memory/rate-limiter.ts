@@ -1,0 +1,39 @@
+import type { Clock, RateLimitDecision, RateLimiter, RateLimitRequest } from "@base/application";
+
+export type SlidingWindowRateLimiterOptions = {
+  readonly clock: Clock;
+};
+
+export class SlidingWindowRateLimiter implements RateLimiter {
+  readonly #clock: Clock;
+  readonly #hits = new Map<string, number[]>();
+
+  constructor(options: SlidingWindowRateLimiterOptions) {
+    this.#clock = options.clock;
+  }
+
+  consume(request: RateLimitRequest): Promise<RateLimitDecision> {
+    const now = this.#clock.now().getTime();
+    const slot = `${request.bucket}\u0000${request.subject}`;
+    const windowStart = now - request.windowMilliseconds;
+    const recent = (this.#hits.get(slot) ?? []).filter((instant) => instant > windowStart);
+
+    if (recent.length >= request.limit) {
+      const oldest = recent[0] ?? now;
+      this.#hits.set(slot, recent);
+      return Promise.resolve({
+        allowed: false,
+        remaining: 0,
+        retryAfterMilliseconds: Math.max(1, oldest + request.windowMilliseconds - now),
+      });
+    }
+
+    recent.push(now);
+    this.#hits.set(slot, recent);
+    return Promise.resolve({
+      allowed: true,
+      remaining: request.limit - recent.length,
+      retryAfterMilliseconds: 0,
+    });
+  }
+}

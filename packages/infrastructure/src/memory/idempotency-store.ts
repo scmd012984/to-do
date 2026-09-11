@@ -1,0 +1,46 @@
+import type { Clock, IdempotencyKey, IdempotencyRecord, IdempotencyStore } from "@base/application";
+
+type StoredRecord = {
+  readonly record: IdempotencyRecord;
+  readonly storedAt: number;
+};
+
+export type InMemoryIdempotencyStoreOptions = {
+  readonly clock: Clock;
+  readonly timeToLiveMilliseconds: number;
+};
+
+function slotOf(key: IdempotencyKey): string {
+  return `${key.scope}\u0000${key.key}`;
+}
+
+export class InMemoryIdempotencyStore implements IdempotencyStore {
+  readonly #clock: Clock;
+  readonly #timeToLive: number;
+  readonly #records = new Map<string, StoredRecord>();
+
+  constructor(options: InMemoryIdempotencyStoreOptions) {
+    this.#clock = options.clock;
+    this.#timeToLive = options.timeToLiveMilliseconds;
+  }
+
+  find(key: IdempotencyKey): Promise<IdempotencyRecord | undefined> {
+    const slot = slotOf(key);
+    const stored = this.#records.get(slot);
+    if (!stored) return Promise.resolve(undefined);
+    if (this.#clock.now().getTime() - stored.storedAt >= this.#timeToLive) {
+      this.#records.delete(slot);
+      return Promise.resolve(undefined);
+    }
+    return Promise.resolve(stored.record);
+  }
+
+  save(record: IdempotencyRecord): Promise<void> {
+    this.#records.set(slotOf(record), { record, storedAt: this.#clock.now().getTime() });
+    return Promise.resolve();
+  }
+
+  get size(): number {
+    return this.#records.size;
+  }
+}

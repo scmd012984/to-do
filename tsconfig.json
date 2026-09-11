@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "baseUrl": ".",
+    "paths": {
+      "@base/*": ["packages/*/src"],
+      "@/*": ["apps/web/src/*", "apps/worker/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "**/node_modules", ".next", "**/.next", "dist", "**/dist"]
+}

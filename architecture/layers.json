@@ -1,0 +1,125 @@
+{
+  "scope": "@base",
+  "layers": {
+    "architecture": {
+      "path": "architecture",
+      "ring": 0,
+      "mayImport": []
+    },
+    "domain": {
+      "path": "packages/domain",
+      "ring": 1,
+      "mayImport": [],
+      "externalAllowed": [
+        "bun:test"
+      ]
+    },
+    "application": {
+      "path": "packages/application",
+      "ring": 2,
+      "mayImport": [
+        "domain"
+      ],
+      "externalAllowed": [
+        "bun:test"
+      ]
+    },
+    "contracts": {
+      "path": "packages/contracts",
+      "ring": 3,
+      "mayImport": [
+        "domain"
+      ],
+      "externalAllowed": [
+        "zod",
+        "bun:test"
+      ]
+    },
+    "adapters": {
+      "path": "packages/adapters",
+      "ring": 3,
+      "mayImport": [
+        "application",
+        "domain",
+        "contracts"
+      ],
+      "externalAllowed": [
+        "zod",
+        "bun:test"
+      ],
+      "externalForbidden": [
+        "next",
+        "react",
+        "react-dom",
+        "drizzle-orm",
+        "@supabase/*",
+        "hono"
+      ]
+    },
+    "infrastructure": {
+      "path": "packages/infrastructure",
+      "ring": 4,
+      "mayImport": [
+        "application",
+        "domain"
+      ],
+      "externalForbidden": [
+        "next",
+        "react",
+        "react-dom"
+      ]
+    },
+    "web": {
+      "path": "apps/web",
+      "ring": 4,
+      "mayImport": [
+        "adapters",
+        "contracts",
+        "infrastructure"
+      ],
+      "mayImportOnlyFrom": {
+        "application": [
+          "src/main"
+        ],
+        "domain": [
+          "src/main"
+        ],
+        "architecture": [
+          "src/main"
+        ]
+      },
+      "main": "src/main"
+    },
+    "worker": {
+      "path": "apps/worker",
+      "ring": 4,
+      "mayImport": [
+        "adapters",
+        "infrastructure"
+      ],
+      "mayImportOnlyFrom": {
+        "application": [
+          "src/main"
+        ],
+        "domain": [
+          "src/main"
+        ],
+        "architecture": [
+          "src/main"
+        ]
+      },
+      "main": "src/main"
+    }
+  },
+  "envAccessOnlyIn": [
+    "apps/web/src/main",
+    "apps/worker/src/main",
+    "scripts/agent",
+    "scripts/db",
+    "scripts/ui",
+    "packages/infrastructure/test"
+  ],
+  "serverOnlyPackages": [
+    "infrastructure"
+  ]
+}

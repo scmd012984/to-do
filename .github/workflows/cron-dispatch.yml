@@ -1,0 +1,56 @@
+name: Cron dispatch
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "41 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-dispatch-${{ github.event.schedule }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event_name == 'workflow_dispatch' || (github.event.schedule == '*/5 * * * *' && vars.CRON_DISPATCH_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Drain the outbox and job queue
+        env:
+          CRON_DISPATCH_URL: ${{ secrets.CRON_DISPATCH_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_DISPATCH_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_DISPATCH_URL and CRON_SECRET repository secrets are required" >&2
+            exit 1
+          fi
+          for attempt in $(seq 1 10); do
+            response=$(curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              --request POST \
+              "$CRON_DISPATCH_URL")
+            echo "$response"
+            hasMoreWork=$(echo "$response" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{process.stdout.write(String(JSON.parse(s).hasMoreWork))})')
+            if [ "$hasMoreWork" != "true" ]; then
+              break
+            fi
+          done
+
+  configuration:
+    if: github.event.schedule == '41 7 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when the dispatch secrets exist but the trigger is off
+        env:
+          CRON_DISPATCH_URL: ${{ secrets.CRON_DISPATCH_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CRON_DISPATCH_ENABLED: ${{ vars.CRON_DISPATCH_ENABLED }}
+        run: |
+          if { [ -n "$CRON_DISPATCH_URL" ] || [ -n "$CRON_SECRET" ]; } && [ "$CRON_DISPATCH_ENABLED" != "true" ]; then
+            echo "A dispatch secret is configured but CRON_DISPATCH_ENABLED is not true: nothing is draining the outbox or the job queue" >&2
+            exit 1
+          fi
+          echo "The dispatch trigger's variable and secrets agree with each other"
