@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
-import { NavbarLayout } from "@/layouts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Base Repo",
-  description: "Next.js base repository",
+  title: "TaskFlow",
+  description: "Gestor de tareas y tableros",
 };
 
-export default function RootLayout() {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es">
-      <body>
-        <NavbarLayout />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
