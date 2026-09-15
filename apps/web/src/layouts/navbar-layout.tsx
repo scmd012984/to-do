@@ -187,7 +187,7 @@ export function NavbarLayout() {
         </div>
       </header>
 
-      <div className="relative flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1">
         {menuOpen && (
           <nav className="absolute left-4 top-4 z-40 flex w-56 flex-col gap-0.5 rounded-lg border border-border bg-background p-2 shadow-lg">
             {NAV_LINKS.map((link) => (
