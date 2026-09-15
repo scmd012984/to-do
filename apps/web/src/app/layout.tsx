@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { readConsentStatus } from "@/main/privacy";
+import { NavbarLayout } from "@/layouts";
 import { AnalyticsScripts } from "./analytics/analytics-scripts";
 import { CookieBanner } from "./cookie-consent/cookie-banner";
 import "./globals.css";
@@ -18,7 +19,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="es">
       <body>
         <AnalyticsScripts />
-        {children}
+        <NavbarLayout>{children}</NavbarLayout>
         <CookieBanner initiallyKnown={known} />
       </body>
     </html>
