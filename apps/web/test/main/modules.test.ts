@@ -31,7 +31,8 @@ describe("composition root with the documents module inactive", () => {
 
 describe("composition root with the documents module active", () => {
   it("mounts the document controllers and routes", () => {
-    const dependencies = buildApiDependencies(defaultModuleActivation);
+    const modules = activationWith({ documents: true, jobs: true });
+    const dependencies = buildApiDependencies(modules);
     expect(dependencies.controllers.documents).toBeDefined();
     const routes = defaultRoutes(dependencies);
     expect(routes.some((route) => route.tag === "documents")).toBe(true);

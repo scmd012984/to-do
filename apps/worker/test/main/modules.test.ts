@@ -75,7 +75,8 @@ describe("worker composition root with the documents and privacy modules inactiv
 describe("worker composition root with every optional module active", () => {
   it("registers a handler for the outbox event instead of leaving it unhandled", async () => {
     const container = createContainer(env);
-    const dispatchOutbox = dispatchOutboxOperation(container, env);
+    const modules = activationWith({ notifications: true, documents: true, jobs: true, privacy: true });
+    const dispatchOutbox = dispatchOutboxOperation(container, env, modules);
     await enqueueTenantCreatedEvent(container);
     const outboxOutcome = await dispatchOutbox(10, 5);
     expect(outboxOutcome.refused).toBe(false);
