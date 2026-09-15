@@ -3,10 +3,10 @@
     "tenants": { "core": true, "active": true, "dependsOn": [] },
     "identity": { "core": true, "active": true, "dependsOn": [] },
     "audit": { "core": true, "active": true, "dependsOn": [] },
-    "jobs": { "core": false, "active": true, "dependsOn": [] },
-    "documents": { "core": false, "active": true, "dependsOn": ["jobs"] },
-    "notifications": { "core": false, "active": true, "dependsOn": [] },
-    "privacy": { "core": false, "active": true, "dependsOn": ["jobs", "documents"] },
+    "jobs": { "core": false, "active": false, "dependsOn": [] },
+    "documents": { "core": false, "active": false, "dependsOn": ["jobs"] },
+    "notifications": { "core": false, "active": false, "dependsOn": [] },
+    "privacy": { "core": false, "active": false, "dependsOn": ["jobs", "documents"] },
     "billing": { "core": false, "active": false, "dependsOn": [] }
   }
 }
