@@ -184,42 +184,42 @@ export function NavbarLayout() {
               <line x1="4" x2="20" y1="18" y2="18" />
             </svg>
           </Button>
+
+          {menuOpen && (
+            <nav className="absolute left-4 top-full z-40 mt-1 flex w-56 flex-col gap-0.5 rounded-lg border border-border bg-background p-2 shadow-lg">
+              {NAV_LINKS.map((link) => (
+                <Button
+                  key={link.href}
+                  type="button"
+                  onClick={() => setActiveSection(link.label)}
+                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    activeSection === link.label
+                      ? "bg-accent text-white"
+                      : "text-muted hover:bg-card hover:text-card-foreground"
+                  }`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d={link.icon} />
+                  </svg>
+                  {link.label}
+                </Button>
+              ))}
+            </nav>
+          )}
         </div>
       </header>
 
-      <div className="relative flex flex-1">
-        {menuOpen && (
-          <nav className="absolute left-4 top-4 z-40 flex w-56 flex-col gap-0.5 rounded-lg border border-border bg-background p-2 shadow-lg">
-            {NAV_LINKS.map((link) => (
-              <Button
-                key={link.href}
-                type="button"
-                onClick={() => setActiveSection(link.label)}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
-                  activeSection === link.label
-                    ? "bg-accent text-white"
-                    : "text-muted hover:bg-card hover:text-card-foreground"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d={link.icon} />
-                </svg>
-                {link.label}
-              </Button>
-            ))}
-          </nav>
-        )}
-
+      <div className="flex flex-1">
         <main
           className={`flex-1 overflow-y-auto p-6 transition-all duration-300 ${
             menuOpen ? "ml-60" : ""
