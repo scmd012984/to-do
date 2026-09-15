@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button, Icon, Input } from "@/ui";
 
@@ -18,6 +18,8 @@ const NAV_LINKS = [
   { label: "Espacio de trabajo", href: "/workspace", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
 ];
 
+const MENU_ICON = "M4 6h16M4 12h16M4 18h16";
+
 export function NavbarLayout({
   children,
   activeSection,
@@ -29,45 +31,26 @@ export function NavbarLayout({
 }) {
   const [menuOpen, setMenuOpen] = useState(true);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
+  function chooseSection(label: string) {
+    onNavigate(label);
+    if (window.matchMedia("(max-width: 767px)").matches) setMenuOpen(false);
+  }
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="z-20 shrink-0 border-b border-border bg-background">
+      <header className="z-20 shrink-0 bg-background">
         <div className="flex items-center gap-3 px-3 py-2 sm:px-4">
-          <Button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted hover:bg-card hover:text-card-foreground"
-            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-            aria-expanded={menuOpen}
-            aria-controls="sidebar-navigation"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              {menuOpen ? (
-                <>
-                  <line x1="18" x2="6" y1="6" y2="18" />
-                  <line x1="6" x2="18" y1="6" y2="18" />
-                </>
-              ) : (
-                <>
-                  <line x1="4" x2="20" y1="12" y2="12" />
-                  <line x1="4" x2="20" y1="6" y2="6" />
-                  <line x1="4" x2="20" y1="18" y2="18" />
-                </>
-              )}
-            </svg>
-          </Button>
-
           <Link href="/" className="flex min-h-11 min-w-11 shrink-0 items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-sm font-bold text-accent-foreground">
               T
@@ -105,45 +88,53 @@ export function NavbarLayout({
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1">
-        {menuOpen ? (
+      <div className="flex min-h-0 flex-1">
+        <div className="z-10 flex shrink-0 flex-col items-start self-start p-3">
           <Button
             type="button"
-            onClick={() => setMenuOpen(false)}
-            className="absolute inset-0 z-0 cursor-pointer border-0 bg-foreground/20 md:hidden"
-            aria-label="Cerrar menú"
-          />
-        ) : null}
-        <aside
-          id="sidebar-navigation"
-          className={`shrink-0 overflow-hidden border-r border-border bg-card transition-[width] duration-300 ease-in-out max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-10 ${
-            menuOpen ? "w-64" : "w-0 border-r-0"
-          }`}
-          aria-hidden={!menuOpen}
-          inert={!menuOpen ? true : undefined}
-        >
-          <nav className="flex h-full w-64 flex-col gap-1 overflow-y-auto p-3">
-            {NAV_LINKS.map((link) => {
-              const isActive = activeSection === link.label;
-              return (
-                <Button
-                  key={link.href}
-                  type="button"
-                  onClick={() => onNavigate(link.label)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-11 w-full cursor-pointer items-center justify-start gap-3 rounded-md border-0 px-3 text-left text-base font-medium transition-colors ${
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-transparent text-muted hover:bg-background hover:text-card-foreground"
-                  }`}
-                >
-                  <Icon path={link.icon} />
-                  {link.label}
-                </Button>
-              );
-            })}
-          </nav>
-        </aside>
+            onClick={() => setMenuOpen((open) => !open)}
+            className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted hover:bg-card hover:text-card-foreground"
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={menuOpen}
+            aria-controls="sidebar-navigation"
+          >
+            <Icon path={MENU_ICON} />
+          </Button>
+
+          <aside
+            id="sidebar-navigation"
+            data-open={menuOpen ? "true" : "false"}
+            className={`mt-2 overflow-hidden rounded-xl bg-card ${
+              menuOpen ? "w-64 border border-border shadow-md" : "w-0 border-0 shadow-none"
+            }`}
+            aria-hidden={!menuOpen}
+            inert={!menuOpen ? true : undefined}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <nav className="nav-cascade flex w-64 flex-col gap-1 p-3">
+                {NAV_LINKS.map((link) => {
+                  const isActive = activeSection === link.label;
+                  return (
+                    <Button
+                      key={link.href}
+                      type="button"
+                      onClick={() => chooseSection(link.label)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex min-h-11 w-full cursor-pointer items-center justify-start gap-3 rounded-md border-0 px-3 text-left text-base font-medium transition-colors ${
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-transparent text-muted hover:bg-background hover:text-card-foreground"
+                      }`}
+                    >
+                      <Icon path={link.icon} />
+                      {link.label}
+                    </Button>
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
+        </div>
 
         <main className="min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
       </div>
