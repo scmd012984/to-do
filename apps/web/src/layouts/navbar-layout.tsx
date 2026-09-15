@@ -29,7 +29,7 @@ export function NavbarLayout({
   activeSection: string;
   onNavigate: (label: string) => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -105,34 +105,32 @@ export function NavbarLayout({
             id="sidebar-navigation"
             data-open={menuOpen ? "true" : "false"}
             className={`mt-2 overflow-hidden rounded-xl bg-card ${
-              menuOpen ? "w-64 border border-border shadow-md" : "w-0 border-0 shadow-none"
+              menuOpen ? "w-64 max-h-dvh border border-border shadow-md" : "w-0 max-h-0 border-0 shadow-none"
             }`}
             aria-hidden={!menuOpen}
             inert={!menuOpen ? true : undefined}
           >
-            <div className="min-h-0 overflow-hidden">
-              <nav className="nav-cascade flex w-64 flex-col gap-1 p-3">
-                {NAV_LINKS.map((link) => {
-                  const isActive = activeSection === link.label;
-                  return (
-                    <Button
-                      key={link.href}
-                      type="button"
-                      onClick={() => chooseSection(link.label)}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`flex min-h-11 w-full cursor-pointer items-center justify-start gap-3 rounded-md border-0 px-3 text-left text-base font-medium transition-colors ${
-                        isActive
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-transparent text-muted hover:bg-background hover:text-card-foreground"
-                      }`}
-                    >
-                      <Icon path={link.icon} />
-                      {link.label}
-                    </Button>
-                  );
-                })}
-              </nav>
-            </div>
+            <nav className="nav-cascade flex w-64 flex-col gap-1 p-3">
+              {NAV_LINKS.map((link) => {
+                const isActive = activeSection === link.label;
+                return (
+                  <Button
+                    key={link.href}
+                    type="button"
+                    onClick={() => chooseSection(link.label)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex min-h-11 w-full cursor-pointer items-center justify-start gap-3 rounded-md border-0 px-3 text-left text-base font-medium transition-colors ${
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-transparent text-muted hover:bg-background hover:text-card-foreground"
+                    }`}
+                  >
+                    <Icon path={link.icon} />
+                    {link.label}
+                  </Button>
+                );
+              })}
+            </nav>
           </aside>
         </div>
 

@@ -81,24 +81,9 @@
   }
 
   #sidebar-navigation {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition-property: grid-template-rows, box-shadow, border-color, width;
+    transition-property: max-height, width, box-shadow, border-color;
     transition-duration: 0.4s;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  #sidebar-navigation[data-open="true"] {
-    grid-template-rows: 1fr;
-  }
-
-  #sidebar-navigation[data-open="false"] {
-    grid-template-rows: 0fr;
-  }
-
-  #sidebar-navigation > * {
-    min-height: 0;
-    overflow: hidden;
   }
 
   #sidebar-navigation[data-open="true"] .nav-cascade > * {
